@@ -1,0 +1,56 @@
+name: Bootstrap from revival-archives
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bootstrap-from-revival-archives.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preserve latest design baseline
+        run: |
+          mkdir -p /tmp/revival-baseline
+          cp design/campaign/CURRENT-LOCKED-BASELINE.md /tmp/revival-baseline/CURRENT-LOCKED-BASELINE.md
+
+      - name: Checkout organization source
+        uses: actions/checkout@v4
+        with:
+          repository: Cer6erusovo/revival-archives
+          ref: main
+          path: __source
+
+      - name: Mirror source tree into personal repository
+        run: |
+          rsync -a --delete \
+            --exclude '.git/' \
+            --exclude '__source/' \
+            __source/ ./
+          rm -rf __source
+          mkdir -p design/campaign
+          cp /tmp/revival-baseline/CURRENT-LOCKED-BASELINE.md design/campaign/CURRENT-LOCKED-BASELINE.md
+          rm -f .init
+          rm -f .github/workflows/bootstrap-from-revival-archives.yml
+
+      - name: Commit mirrored repository
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'chore: mirror revival-archives project baseline'
+          git push origin HEAD:main
