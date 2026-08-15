@@ -1,0 +1,165 @@
+<!-- PROTOTYPE - NOT FOR PRODUCTION -->
+<!-- Question: Will players risk repeated ghost-shadow probes to gather enough evidence to infer a hidden rule? -->
+<!-- Date: 2026-08-13 -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>鬼影试探原型</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Songti SC", "STSong", serif;
+      background: #111411;
+      color: #d7d6ca;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(90deg, transparent 49.8%, rgba(232, 230, 209, .03) 50%, transparent 50.2%),
+        #111411;
+    }
+    main { width: min(980px, calc(100vw - 32px)); padding: 32px 0; }
+    header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid #52564e; padding-bottom: 14px; }
+    h1 { margin: 0; font-size: clamp(24px, 4vw, 42px); font-weight: 500; letter-spacing: .12em; }
+    .case { color: #8b9084; font: 12px/1.6 ui-monospace, monospace; text-align: right; }
+    .brief { max-width: 720px; line-height: 1.85; color: #aeb1a7; }
+    .layout { display: grid; grid-template-columns: 1.4fr .8fr; gap: 20px; margin-top: 24px; }
+    section { border: 1px solid #3f443e; padding: 20px; background: rgba(22, 26, 23, .92); }
+    h2 { margin: 0 0 16px; font: 13px/1 ui-monospace, monospace; letter-spacing: .16em; color: #8f978b; text-transform: uppercase; }
+    .targets { display: grid; gap: 12px; }
+    button {
+      width: 100%; text-align: left; padding: 14px 16px; border: 1px solid #676b61;
+      background: #1c211d; color: #e1e0d4; cursor: pointer; font: inherit;
+    }
+    button:hover:not(:disabled), button:focus-visible { outline: 2px solid #b7b19b; outline-offset: 2px; background: #262c27; }
+    button:disabled { opacity: .38; cursor: not-allowed; }
+    button strong { display: block; font-size: 17px; font-weight: 500; }
+    button span { display: block; margin-top: 5px; color: #92978e; font-size: 13px; }
+    .log { min-height: 190px; line-height: 1.8; white-space: pre-line; }
+    .symptoms { min-height: 128px; border-left: 3px solid #3e443e; padding-left: 14px; line-height: 1.75; color: #abb0a6; }
+    .symptoms.stage-2 { border-color: #746855; color: #c1b7a7; }
+    .symptoms.stage-3 { border-color: #773c36; color: #d4aaa4; text-shadow: 8px 0 10px rgba(93, 21, 17, .35); }
+    ul { margin: 0; padding-left: 20px; line-height: 1.75; }
+    .hypotheses { display: none; gap: 10px; margin-top: 16px; }
+    .hypotheses.visible { display: grid; }
+    .result { margin-top: 16px; padding: 16px; border: 1px solid #5e645b; line-height: 1.8; display: none; }
+    .result.visible { display: block; }
+    .result.bad { border-color: #753e39; color: #dfb0ab; }
+    .metrics { margin-top: 20px; color: #777e75; font: 11px/1.6 ui-monospace, monospace; }
+    @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } header { display: block; } .case { text-align: left; margin-top: 10px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>鬼影试探</h1>
+      <div class="case">CASE 0A-17<br>封锁楼 · 二层</div>
+    </header>
+    <p class="brief">凌晨 00:17。二层三扇门同时传来敲击声。你站在安全线外，可以让鬼影沿门缝进入房间。没有仪器能告诉你还能使用它几次。</p>
+    <div class="layout">
+      <div>
+        <section>
+          <h2>可试探目标</h2>
+          <div class="targets" id="targets"></div>
+        </section>
+        <section style="margin-top:20px">
+          <h2>现场记录</h2>
+          <div class="log" id="log">鬼影贴在你脚下，一动不动。至少现在，它还像是你的影子。</div>
+          <div class="hypotheses" id="hypotheses">
+            <button data-hypothesis="sound">敲门声出现时，门内的人会被杀死。</button>
+            <button data-hypothesis="plate">门牌与登记身份不匹配的人，会在熄灯后被替换。</button>
+            <button data-hypothesis="shadow">影子进入过的房间，会成为下一次袭击目标。</button>
+          </div>
+          <div class="result" id="result"></div>
+        </section>
+      </div>
+      <aside>
+        <section>
+          <h2>身体征兆</h2>
+          <div class="symptoms" id="symptoms">掌心仍有温度。影子的边缘与鞋尖完全重合。</div>
+        </section>
+        <section style="margin-top:20px">
+          <h2>已确认线索</h2>
+          <ul id="evidence"><li>尚无</li></ul>
+        </section>
+      </aside>
+    </div>
+    <div class="metrics" id="metrics">原型观测：试探 0/3 · 尚未形成规律判断</div>
+  </main>
+  <script>
+    // PROTOTYPE - NOT FOR PRODUCTION
+    // Question: Will players risk repeated ghost-shadow probes to gather enough evidence to infer a hidden rule?
+    // Date: 2026-08-13
+    const probes = [
+      {
+        id: "201", name: "201 · 空置房", hint: "登记册写着“空置”，门内却有电视声。",
+        log: "鬼影从 201 门缝下钻入。电视没有接电，却在播放一段住户登记录像。画面里，201 的门牌被人摘下，换到了 203 门上。录像结束后，房内的敲门声才响起。",
+        evidence: "敲门发生前，门牌已经被调换。"
+      },
+      {
+        id: "202", name: "202 · 幸存者房间", hint: "住户隔门坚持自己一直住在 203。",
+        log: "鬼影贴着墙进入 202。床下藏着一张身份证和两把钥匙，姓名都属于登记册里的 203 住户。屋内的人没有影子，却能准确说出 203 的陈设。",
+        evidence: "房间里的人与登记身份不一致。"
+      },
+      {
+        id: "203", name: "203 · 封死房", hint: "门牌崭新，门框后仍能看见“201”的旧钉孔。",
+        log: "鬼影穿过封条。房中没有尸体，只有一张背对房门站立的人皮。楼道灯熄灭时，人皮转向门牌；灯再亮起，它的脸变成了 201 原住户。",
+        evidence: "熄灯后，错误房间会把人替换成对应住户。"
+      }
+    ];
+    let used = [];
+    const targets = document.querySelector("#targets");
+    const log = document.querySelector("#log");
+    const symptoms = document.querySelector("#symptoms");
+    const evidence = document.querySelector("#evidence");
+    const hypotheses = document.querySelector("#hypotheses");
+    const result = document.querySelector("#result");
+    const metrics = document.querySelector("#metrics");
+
+    probes.forEach((probe) => {
+      const button = document.createElement("button");
+      button.innerHTML = `<strong>${probe.name}</strong><span>${probe.hint}</span>`;
+      button.addEventListener("click", () => runProbe(probe, button));
+      targets.append(button);
+    });
+
+    function runProbe(probe, button) {
+      button.disabled = true;
+      used.push(probe);
+      log.textContent = probe.log;
+      evidence.innerHTML = used.map((item) => `<li>${item.evidence}</li>`).join("");
+      const stage = used.length;
+      symptoms.className = `symptoms stage-${stage}`;
+      symptoms.textContent = [
+        "你的指尖迅速失温。收回来的鬼影比你的动作慢了半拍。",
+        "左臂出现淡灰尸斑。你已经站直，影子却仍保持着俯身窥视的姿势。",
+        "走廊里有两个你的影子。较远的那个先一步抬头，面朝 203。"
+      ][stage - 1];
+      metrics.textContent = `原型观测：试探 ${stage}/3 · ${stage >= 2 ? "玩家已承担第二次代价" : "可在此止步，但证据不足"}`;
+      if (stage >= 2) hypotheses.classList.add("visible");
+    }
+
+    document.querySelectorAll("[data-hypothesis]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const correct = button.dataset.hypothesis === "plate" && used.length === 3;
+        const premature = button.dataset.hypothesis === "plate" && used.length < 3;
+        result.className = `result visible${correct ? "" : " bad"}`;
+        if (correct) {
+          result.textContent = "规律成立。敲门只是暴露异常的表象；真正的处决发生在熄灯后，目标是身份与门牌不匹配的人。你找到了能被利用的条件，但鬼影也已经越过安全边界。";
+        } else if (premature) {
+          result.textContent = "方向接近，但证据链不完整。你知道身份有问题，却无法解释门牌何时改变、替换何时发生。若现在进入现场，判断仍可能害死你。";
+        } else {
+          result.textContent = "假设无法解释全部现象。死亡不是随机惩罚：回看已确认线索，找出哪个假设同时解释门牌、身份和熄灯后的替换。";
+        }
+        metrics.textContent += correct ? " · 正确规律已形成" : " · 假设未通过证据检验";
+      });
+    });
+  </script>
+</body>
+</html>
