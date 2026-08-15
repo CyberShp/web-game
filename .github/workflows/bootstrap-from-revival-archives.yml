@@ -19,10 +19,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Preserve latest design baseline
+      - name: Preserve target-only files
         run: |
           mkdir -p /tmp/revival-baseline
           cp design/campaign/CURRENT-LOCKED-BASELINE.md /tmp/revival-baseline/CURRENT-LOCKED-BASELINE.md
+          cp .github/workflows/bootstrap-from-revival-archives.yml /tmp/revival-baseline/bootstrap.yml
 
       - name: Checkout organization source
         uses: actions/checkout@v4
@@ -31,17 +32,18 @@ jobs:
           ref: main
           path: __source
 
-      - name: Mirror source tree into personal repository
+      - name: Mirror source tree except workflows
         run: |
           rsync -a --delete \
             --exclude '.git/' \
             --exclude '__source/' \
+            --exclude '.github/workflows/' \
             __source/ ./
           rm -rf __source
-          mkdir -p design/campaign
+          mkdir -p design/campaign .github/workflows
           cp /tmp/revival-baseline/CURRENT-LOCKED-BASELINE.md design/campaign/CURRENT-LOCKED-BASELINE.md
+          cp /tmp/revival-baseline/bootstrap.yml .github/workflows/bootstrap-from-revival-archives.yml
           rm -f .init
-          rm -f .github/workflows/bootstrap-from-revival-archives.yml
 
       - name: Commit mirrored repository
         run: |
